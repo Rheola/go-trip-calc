@@ -1,0 +1,42 @@
+version: "3"
+
+services:
+#  trip-api-go:
+#    build:
+#      context: ./app
+#      dockerfile: Dockerfile
+#    ports:
+#      - 81:8080
+#    environment:
+#      - DB_URL=postgres://db-user:db-password@postgres-db:5429/trip?sslmode=disable
+#      - PORT=8080
+#    depends_on:
+#      - postgresDb
+  postgresDb:
+    image: postgres:9.6
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - "./data/postgres:/var/lib/postgresql/data/" # Мапим БД на системную папку.
+    ports:
+      - 5429:5432
+    environment:
+      - POSTGRES_USER=db-user
+      - POSTGRES_PASSWORD=db-password
+      - PGTZ=GMT+3
+      - DEBUG=true
+#    healthcheck:
+#      test: PGPASSWORD='db-password' psql -U db-user --command='SELECT 1'
+#      interval: 1s
+#      timeout: 2s
+#      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: pgadmin@trip
+      PGADMIN_DEFAULT_PASSWORD: pgadmin
+    ports:
+      - 5050:80
+      - 443:443
+    depends_on:
+      - postgresDb
