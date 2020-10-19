@@ -3,56 +3,50 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/rheola/go-trip-calc/app/models"
-	"github.com/rheola/go-trip-calc/app/restapi"
+	"go-trip-calc/app/models"
+	"go-trip-calc/app/restapi"
 	"io/ioutil"
-	"log"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
+	"time"
 )
 
-func handleRequests() {
-	router := mux.NewRouter()
+func addRequest(w http.ResponseWriter, r *http.Request) {
 
-	router.HandleFunc("/calc", addRequest()).Methods(http.MethodPost)
-	//router.HandleFunc("/status", checkStatus()).Methods(http.MethodGet)
+	body, err := ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
+	requestModel := &models.RouteParams{}
+	err = json.Unmarshal(body, requestModel)
 
-	fmt.Println("PORT:", os.Getenv("PORT"))
-	port := os.Getenv("PORT")
-	log.Fatal(http.ListenAndServe(port, router))
-}
-
-func addRequest() func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		routeParams := new(models.RouteParams)
-		err := json.NewDecoder(r.Body).Decode(routeParams)
-		if err != nil {
-			apiResponse := restapi.APIResponse{
-				Code:    http.StatusBadRequest,
-				Message: "Couldn't parse request body",
-			}
-			json.NewEncoder(w).Encode(apiResponse)
-
-			return
+	if err != nil {
+		apiResponse := restapi.APIResponse{
+			Code:    http.StatusBadRequest,
+			Message: "Couldn't parse request body",
 		}
+		json.NewEncoder(w).Encode(apiResponse)
 
-		// Data validation
-
-		// Pet creation
-		/*h.petController.AddPet(petItem)
-
-		resp := APIResponse{
-			Code: http.StatusCreated,
-		}*/
-		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(resp)
+		return
 	}
-}
 
-func checkStatus(w http.ResponseWriter, r *http.Request) {
+	fmt.Println(requestModel)
+
+	// Data validation
+	err = requestModel.Validate()
+	if err != nil {
+		fmt.Println(err)
+
+		resp := restapi.APIResponse{
+			Code:    http.StatusBadRequest,
+			Message: err.Error(),
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(resp)
+		return
+	}
+	resp := restapi.APIResponse{
+		Code: http.StatusCreated,
+	}
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(resp)
 
 }
 
@@ -64,11 +58,23 @@ func createNewArticle(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
+	//interrupt := make(chan os.Signal, 1)
+	//signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 	//db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
 
 	fmt.Println("Start")
 
-	handleRequests()
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/", addRequest)
+
+	server := http.Server{
+		Addr:         ":8080",
+		Handler:      mux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+	fmt.Println("starting server at :8080")
+
+	server.ListenAndServe()
 }
