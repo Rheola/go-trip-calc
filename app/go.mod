@@ -1,9 +1,3 @@
-module mod
+module go-trip-calc/app
 
-go 1.14
-
-require (
-	github.com/gorilla/mux v1.8.0
-	github.com/jinzhu/gorm v1.9.16 // indirect
-	gorm.io/gorm v1.20.2 // indirect
-)
+go 1.15
