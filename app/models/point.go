@@ -1,6 +1,9 @@
 package models
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 type Point struct {
 	Lat float64 `json:"lat"`
@@ -12,6 +15,9 @@ type RouteParams struct {
 	To   Point
 }
 
+func (point Point) ToString() string {
+	return fmt.Sprintf("(%.6f, %.6f)", point.Lat, point.Lon)
+}
 func (point Point) validate() error {
 	if point.Lat > 90 || point.Lat < -90 {
 		err := errors.New("latitude must be a number between -90 and 90")
