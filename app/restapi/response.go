@@ -6,8 +6,8 @@ import (
 )
 
 type APIResponse struct {
-	Code    int32  `json:"code"`
-	Message string `json:"message"`
+	Code    int32       `json:"code"`
+	Message interface{} `json:"message"`
 }
 
 func ResponseBadRequest(w http.ResponseWriter, err error) {
