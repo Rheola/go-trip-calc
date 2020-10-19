@@ -9,7 +9,6 @@ CREATE DATABASE tripdb
 create table rates
 (
     id         bigserial primary key,
-    name       text unique,
     from_point point,
     to_point   point,
     status     smallint,
