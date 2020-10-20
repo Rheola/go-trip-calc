@@ -15,8 +15,12 @@ func (point Point) ToString() string {
 }
 
 type RouteParams struct {
-	From Point
-	To   Point
+	Id       uint
+	From     Point
+	To       Point
+	Status   uint
+	Distance uint
+	Duration uint
 }
 
 type CalcResult struct {
