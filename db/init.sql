@@ -12,8 +12,8 @@ create table rates
     from_point point,
     to_point   point,
     status     smallint,
-    distance   smallint,
-    duration   smallint,
+    distance   int8,
+    duration   int8,
     created_at timestamp,
     updated_at timestamp
 );
