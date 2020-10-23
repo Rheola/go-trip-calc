@@ -1,7 +1,6 @@
 package restapi
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,11 +9,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
-	"time"
 )
 
 type Handler struct {
-	DB *sql.DB
+	DB *models.TripDb
 	Ch chan models.RouteParams
 }
 
@@ -38,15 +36,7 @@ func (h *Handler) Add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var id int
-	now := time.Now()
-	err = h.DB.QueryRow(
-		"INSERT INTO rates (from_point, to_point, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $4) RETURNING id",
-		requestModel.From.ToString(),
-		requestModel.To.ToString(),
-		models.StatusNone,
-		now.Format("2006-01-02 15:04:05"),
-	).Scan(&id)
+	err = h.DB.Create(requestModel)
 
 	if err != nil {
 		ResponseInternalError(w, err)
@@ -55,7 +45,7 @@ func (h *Handler) Add(w http.ResponseWriter, r *http.Request) {
 	h.Ch <- *requestModel
 	resp := APIResponse{
 		Code:    http.StatusCreated,
-		Message: fmt.Sprintf("%d", id),
+		Message: fmt.Sprintf("%d", requestModel.Id),
 	}
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(resp)
@@ -70,10 +60,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	calcResult := &models.CalcResult{}
-	// QueryRow сам закрывает коннект
-	row := h.DB.QueryRow("SELECT status, distance, duration FROM rates  WHERE id = $1", id)
-	err = row.Scan(&calcResult.Status, &calcResult.Distance, &calcResult.Duration)
+	calcResult, err := h.DB.Get(id)
 	if err != nil {
 		ResponseInternalError(w, err)
 		return
