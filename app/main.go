@@ -16,19 +16,6 @@ import (
 
 func main() {
 
-	hereChannel := make(chan models.RouteParams)
-	go func(in chan models.RouteParams) {
-		for {
-			select {
-			case val := <-in:
-
-				fmt.Println("GO: get from chan", val)
-				internal.CalcRoute(val)
-				fmt.Println("GO: after read from chan")
-			}
-		}
-	}(hereChannel)
-
 	//interrupt := make(chan os.Signal, 1)
 	//signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 	conf := resource.Config{}
@@ -48,10 +35,48 @@ func main() {
 
 	defer dbConn.Close()
 
+	tripDb := models.TripDb{*dbConn}
+
+	hereChannel := make(chan models.RouteParams)
 	handler := &restapi.Handler{
-		DB: dbConn,
+		DB: &tripDb,
 		Ch: hereChannel,
 	}
+
+	go func(in chan models.RouteParams) {
+		for {
+			select {
+			case val := <-in:
+				val.Status = models.StatusProcess
+				err := handler.DB.Update(&val)
+
+				if err != nil {
+					fmt.Println(" Update err")
+					fmt.Println(err)
+
+				} else {
+
+					res, err := internal.CalcRoute(val)
+
+					if err != nil {
+						val.Status = models.StatusFailed
+						fmt.Println(err)
+						_ = handler.DB.Update(&val)
+					} else {
+
+						val.Status = models.StatusOk
+						val.Distance = res.Length
+						val.Duration = res.Duration
+						err = handler.DB.Update(&val)
+						if err != nil {
+
+						}
+					}
+				}
+
+			}
+		}
+	}(hereChannel)
 
 	//mux := http.NewServeMux()
 	mux := mux.NewRouter()
