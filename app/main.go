@@ -3,15 +3,13 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"github.com/gorilla/mux"
 	"github.com/kelseyhightower/envconfig"
 	_ "github.com/lib/pq"
-	"github.com/rheola/go-trip-calc/app/internal"
 	"github.com/rheola/go-trip-calc/app/models"
 	"github.com/rheola/go-trip-calc/app/resource"
 	"github.com/rheola/go-trip-calc/app/restapi"
-	"net/http"
-	"time"
+	"os"
+	"os/signal"
 )
 
 func main() {
@@ -39,58 +37,31 @@ func main() {
 
 	hereChannel := make(chan models.RouteParams)
 	handler := &restapi.Handler{
-		DB: &tripDb,
-		Ch: hereChannel,
+		DB:     &tripDb,
+		Ch:     hereChannel,
+		Closed: make(chan struct{}),
 	}
+
+	closeChannel := make(chan os.Signal)
+	signal.Notify(closeChannel, os.Interrupt)
 
 	go func(in chan models.RouteParams) {
 		for {
 			select {
 			case val := <-in:
-				val.Status = models.StatusProcess
-				err := handler.DB.Update(&val)
-
-				if err != nil {
-					fmt.Println(" Update err")
-					fmt.Println(err)
-
-				} else {
-
-					res, err := internal.CalcRoute(val)
-
-					if err != nil {
-						val.Status = models.StatusFailed
-						fmt.Println(err)
-						_ = handler.DB.Update(&val)
-					} else {
-
-						val.Status = models.StatusOk
-						val.Distance = res.Length
-						val.Duration = res.Duration
-						err = handler.DB.Update(&val)
-						if err != nil {
-
-						}
-					}
-				}
-
+				handler.Wg.Add(1)
+				handler.Worker(val)
 			}
 		}
 	}(hereChannel)
 
-	//mux := http.NewServeMux()
-	mux := mux.NewRouter()
-	mux.HandleFunc("/routes/{id:[0-9]+}", handler.Get)
-	mux.HandleFunc("/routes", handler.Add)
+	go func() {
+		handler.Run()
+	}()
 
-	server := http.Server{
-		Addr:         ":8080",
-		Handler:      mux,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+	select {
+	case sig := <-closeChannel:
+		fmt.Printf("okunewa Got %s signal. Aborting...\n", sig)
+		handler.Stop()
 	}
-	fmt.Println("starting server at :8080")
-
-	server.ListenAndServe()
-
 }
