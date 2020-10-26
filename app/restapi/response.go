@@ -26,6 +26,16 @@ func ResponseInternalError(w http.ResponseWriter, err error) {
 		Code:    http.StatusInternalServerError,
 		Message: err.Error(),
 	}
-	w.WriteHeader(http.StatusBadRequest)
+	w.WriteHeader(http.StatusInternalServerError)
+	json.NewEncoder(w).Encode(resp)
+}
+
+func ResponseNotFoundError(w http.ResponseWriter, err error) {
+
+	resp := APIResponse{
+		Code:    http.StatusNotFound,
+		Message: err.Error(),
+	}
+	w.WriteHeader(http.StatusNotFound)
 	json.NewEncoder(w).Encode(resp)
 }
