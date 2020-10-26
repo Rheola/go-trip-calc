@@ -49,13 +49,19 @@ func (handler *Handler) Add(w http.ResponseWriter, r *http.Request) {
 		ResponseInternalError(w, err)
 		return
 	}
-	handler.Ch <- *requestModel
 	resp := APIResponse{
 		Code:    http.StatusCreated,
 		Message: fmt.Sprintf("%d", requestModel.Id),
 	}
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(resp)
+
+	handler.Wg.Add(1)
+	go func(requestModel *models.RouteParams) {
+		fmt.Println("go func")
+		handler.Worker(*requestModel)
+		fmt.Println("go func end")
+	}(requestModel)
 }
 
 func (handler *Handler) Get(w http.ResponseWriter, r *http.Request) {

@@ -14,8 +14,6 @@ import (
 
 func main() {
 
-	//interrupt := make(chan os.Signal, 1)
-	//signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 	conf := resource.Config{}
 	err := envconfig.Process("", &conf)
 	if err != nil {
@@ -35,7 +33,7 @@ func main() {
 
 	tripDb := models.TripDb{*dbConn}
 
-	hereChannel := make(chan models.RouteParams)
+	hereChannel := make(chan models.RouteParams, 2)
 	handler := &restapi.Handler{
 		DB:     &tripDb,
 		Ch:     hereChannel,
@@ -44,16 +42,6 @@ func main() {
 
 	closeChannel := make(chan os.Signal)
 	signal.Notify(closeChannel, os.Interrupt)
-
-	go func(in chan models.RouteParams) {
-		for {
-			select {
-			case val := <-in:
-				handler.Wg.Add(1)
-				handler.Worker(val)
-			}
-		}
-	}(hereChannel)
 
 	go func() {
 		handler.Run()
