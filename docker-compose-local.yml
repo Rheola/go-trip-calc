@@ -1,17 +1,17 @@
 version: "3"
 
 services:
-  trip-api-go:
-    build:
-      context: ./app
-      dockerfile: Dockerfile
-    ports:
-      - 81:8000
-    environment:
-      - DB_URL=postgres://db-user:db-password@postgres-db:5429/trip?sslmode=disable
-      - PORT=8000
-    depends_on:
-      - postgresDb
+#  trip-api-go:
+#    build:
+#      context: ./app
+#      dockerfile: Dockerfile
+#    ports:
+#      - 81:8080
+#    environment:
+#      - DB_URL=postgres://db-user:db-password@postgres-db:5429/trip?sslmode=disable
+#      - PORT=8080
+#    depends_on:
+#      - postgresDb
   postgresDb:
     image: postgres:9.6
     volumes:

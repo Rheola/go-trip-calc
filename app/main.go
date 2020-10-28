@@ -3,28 +3,34 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"github.com/kelseyhightower/envconfig"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/rheola/go-trip-calc/app/config"
 	"github.com/rheola/go-trip-calc/app/models"
-	"github.com/rheola/go-trip-calc/app/resource"
 	"github.com/rheola/go-trip-calc/app/restapi"
+	"log"
 	"os"
 	"os/signal"
 )
 
+func init() {
+	if err := godotenv.Load(); err != nil {
+		log.Print("No .env file found")
+	}
+}
+
 func main() {
+	conf := config.New()
+	fmt.Println(conf.Port)
 
-	conf := resource.Config{}
-	err := envconfig.Process("", &conf)
+	fmt.Println(conf.DbUrl)
+	dbConn, err := sql.Open("postgres", conf.DbUrl)
+
 	if err != nil {
 		panic(err)
 	}
 
-	dbConn, err := sql.Open("postgres", conf.DBURL)
-	if err != nil {
-		panic(err)
-	}
-	err = dbConn.Ping() // вот туc будет первое подключение к базе
+	err = dbConn.Ping()
 	if err != nil {
 		panic(err)
 	}
@@ -33,7 +39,8 @@ func main() {
 
 	tripDb := models.TripDb{*dbConn}
 
-	hereChannel := make(chan models.RouteParams, 2)
+	hereChannel := make(chan models.RouteParams, 1)
+
 	handler := &restapi.Handler{
 		DB:     &tripDb,
 		Ch:     hereChannel,
@@ -48,8 +55,7 @@ func main() {
 	}()
 
 	select {
-	case sig := <-closeChannel:
-		fmt.Printf("okunewa Got %s signal. Aborting...\n", sig)
+	case _ = <-closeChannel:
 		handler.Stop()
 	}
 }
