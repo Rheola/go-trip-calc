@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/rheola/go-trip-calc/app/config"
 	"github.com/rheola/go-trip-calc/app/internal"
 	"github.com/rheola/go-trip-calc/app/models"
 	"io/ioutil"
@@ -22,21 +23,26 @@ type Handler struct {
 }
 
 func (handler *Handler) Add(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Wg.Add Add")
 	handler.Wg.Add(1)
 	defer handler.Wg.Done()
 	body, err := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
-	requestModel := &models.RouteParams{}
-	err = json.Unmarshal(body, requestModel)
 
 	if err != nil {
-		errBody := errors.New("Couldn't parse request body")
+		errBody := errors.New("couldn't read request body")
 		ResponseBadRequest(w, errBody)
 		return
 	}
 
-	// Data validation
+	requestModel := &models.RouteParams{}
+	err = json.Unmarshal(body, requestModel)
+
+	if err != nil {
+		errBody := errors.New("couldn't parse request body")
+		ResponseBadRequest(w, errBody)
+		return
+	}
+
 	err = requestModel.Validate()
 	if err != nil {
 		ResponseBadRequest(w, err)
@@ -44,11 +50,11 @@ func (handler *Handler) Add(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = handler.DB.Create(requestModel)
-
 	if err != nil {
 		ResponseInternalError(w, err)
 		return
 	}
+
 	resp := APIResponse{
 		Code:    http.StatusCreated,
 		Message: fmt.Sprintf("%d", requestModel.Id),
@@ -57,33 +63,24 @@ func (handler *Handler) Add(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 
 	handler.Wg.Add(1)
-	go func(requestModel *models.RouteParams) {
-		fmt.Println("go func")
-		handler.Worker(*requestModel)
-		fmt.Println("go func end")
-	}(requestModel)
+	go handler.Worker(*requestModel)
 }
 
 func (handler *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Wg Add Get")
 
 	handler.Wg.Add(1)
-	fmt.Println("Get start")
 	defer handler.Wg.Done()
-
-	time.Sleep(5 * time.Second)
 
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 
 	if err != nil {
-		ResponseInternalError(w, errors.New("Id not set"))
+		ResponseInternalError(w, errors.New("id not set"))
 		return
 	}
 
 	calcResult, err := handler.DB.Get(id)
 	if err != nil {
-		fmt.Println(err)
 		if err.Error() == "sql: no rows in result set" {
 			ResponseNotFoundError(w, err)
 			return
@@ -111,23 +108,23 @@ func (handler *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 func (handler *Handler) Stop() {
 	close(handler.Closed)
-	fmt.Println("Stop")
 	handler.Wg.Wait()
-	fmt.Println("after Stop ")
 }
 
 func (handler *Handler) Run() {
+	conf := config.New()
+	port := conf.Port
 	mux := mux.NewRouter()
 	mux.HandleFunc("/routes/{id:[0-9]+}", handler.Get)
 	mux.HandleFunc("/routes", handler.Add)
 
 	server := http.Server{
-		Addr:         ":8080",
+		Addr:         ":" + port,
 		Handler:      mux,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
-	fmt.Println("starting server at :8080")
+	fmt.Println("starting server at  ", port)
 
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -142,15 +139,10 @@ func (handler *Handler) Run() {
 func (handler *Handler) Worker(val models.RouteParams) {
 	defer handler.Wg.Done()
 
-	fmt.Println("Worker start")
-
-	time.Sleep(10 * time.Second)
-
 	val.Status = models.StatusProcess
 	err := handler.DB.Update(&val)
 
 	if err != nil {
-		fmt.Println("Db update error")
 		fmt.Println(err)
 		return
 	}
