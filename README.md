@@ -1,12 +1,20 @@
 # go-trip-calc
 
+
+# Локальный запуск
+``` 
+    docker-compose -f docker-compose-local.yml  up -d  
+```
+
+
+
+Сервис должен иметь README.md с описанием сборки, локального
+запуска, запуска в Docker-контейнере и т.п. 
 ``` 
  docker network create trip-api
 ```
 
-``` 
-    docker-compose up -d
-```
+
 
 
 ```curl
