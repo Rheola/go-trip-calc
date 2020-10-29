@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/golang/glog"
 	"github.com/gorilla/mux"
 	"github.com/rheola/go-trip-calc/app/config"
 	"github.com/rheola/go-trip-calc/app/internal"
@@ -95,14 +96,17 @@ func (handler *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	case models.StatusNone:
 		fallthrough
 	case models.StatusProcess:
+		w.WriteHeader(http.StatusTooEarly)
+		resp.Code = http.StatusTooEarly
 		resp.Message = "Waiting. Route not calking yet"
 	case models.StatusFailed:
+		w.WriteHeader(http.StatusInternalServerError)
 		resp.Message = "Calc error"
 	case models.StatusOk:
+		w.WriteHeader(http.StatusOK)
 		resp.Message = *calcResult
 	}
 
-	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(resp)
 }
 
@@ -114,13 +118,13 @@ func (handler *Handler) Stop() {
 func (handler *Handler) Run() {
 	conf := config.New()
 	port := conf.Port
-	mux := mux.NewRouter()
-	mux.HandleFunc("/routes/{id:[0-9]+}", handler.Get)
-	mux.HandleFunc("/routes", handler.Add)
+	router := mux.NewRouter()
+	router.HandleFunc("/routes/{id:[0-9]+}", handler.Get)
+	router.HandleFunc("/routes", handler.Add)
 
 	server := http.Server{
 		Addr:         ":" + port,
-		Handler:      mux,
+		Handler:      router,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
@@ -143,19 +147,18 @@ func (handler *Handler) Worker(val models.RouteParams) {
 	err := handler.DB.Update(&val)
 
 	if err != nil {
-		fmt.Println(err)
+		glog.Error("Db update error", err)
 		return
 	}
 
 	res, err := internal.CalcRoute(val)
 
 	if err != nil {
+		glog.Error("Calc route error", err)
 		val.Status = models.StatusFailed
-		fmt.Println("CalcRoute error ", err)
-
 		err = handler.DB.Update(&val)
 		if err != nil {
-			fmt.Println("Db update error", err)
+			glog.Error("Db update error", err)
 		}
 		return
 	}
@@ -165,7 +168,6 @@ func (handler *Handler) Worker(val models.RouteParams) {
 	val.Duration = res.Duration
 	err = handler.DB.Update(&val)
 	if err != nil {
-		fmt.Println("Db update error", err)
+		glog.Error("Db update error", err)
 	}
-	fmt.Println("Worker end")
 }
