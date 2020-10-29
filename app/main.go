@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/rheola/go-trip-calc/app/config"
@@ -21,9 +20,7 @@ func init() {
 
 func main() {
 	conf := config.New()
-	fmt.Println(conf.Port)
 
-	fmt.Println(conf.DbUrl)
 	dbConn, err := sql.Open("postgres", conf.DbUrl)
 
 	if err != nil {
