@@ -2,18 +2,22 @@ version: "3"
 
 services:
   trip-api-go:
+    restart: always
+    container_name: goTripCalc
     build:
       context: ./app
       dockerfile: Dockerfile
     ports:
       - 81:8000
     environment:
-      - DB_URL=postgres://db-user:db-password@postgres-db:5429/trip?sslmode=disable
+      - DB_URL=postgres://db-user:db-password@postgresDb:5432/tripdb?sslmode=disable
       - PORT=8000
+      - API_KEY=key
     depends_on:
       - postgresDb
   postgresDb:
-    image: postgres:9.6
+    image: postgres:10
+    container_name: postgresTripCalc
     volumes:
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
       - "./data/postgres:/var/lib/postgresql/data/" # Мапим БД на системную папку.
@@ -26,6 +30,7 @@ services:
       - DEBUG=true
   pgadmin:
     image: dpage/pgadmin4
+    container_name: pgadminTripCalc
     environment:
       PGADMIN_DEFAULT_EMAIL: pgadmin@trip
       PGADMIN_DEFAULT_PASSWORD: pgadmin
