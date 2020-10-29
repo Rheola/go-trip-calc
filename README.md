@@ -19,7 +19,7 @@
 ```
 Отредактировать ```.env```
 ``` 
-   docker-compose -f    up -d  
+   docker-compose up -d  
 ```
   
   
