@@ -34,7 +34,7 @@ func ResponseNotFoundError(w http.ResponseWriter, err error) {
 
 	resp := APIResponse{
 		Code:    http.StatusNotFound,
-		Message: err.Error(),
+		Message: "Not found",
 	}
 	w.WriteHeader(http.StatusNotFound)
 	json.NewEncoder(w).Encode(resp)
