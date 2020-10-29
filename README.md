@@ -1,7 +1,7 @@
-# go-trip-calc
+# сервис  расчета поездки
 
 
-# Локальный запуск
+## Локальный запуск
 ``` 
    docker-compose -f docker-compose-local.yml  up -d  
    cp dist.env app/.env
@@ -13,7 +13,7 @@
    go run main.go
 ```
 
-# запуск  в Docker-контейнере
+## Запуск  в Docker-контейнере
 ``` 
    cp dist.env .env 
 ```
@@ -24,7 +24,7 @@
   
   
 Использование  
-# Запрос на расчет 
+## Запрос на расчет 
 
 `` POST /routes``
 ``header 'Content-Type: application/json'``
@@ -41,15 +41,15 @@
 }
 ```
 
-## Ответ
-### OK
+### Ответ
+#### OK
 ```json
 {
     "code": 201,
     "message": "4"
 }
 ```
-### Fail
+#### Fail
 Header 400 Bad Request
 ```json 
 {
@@ -74,14 +74,14 @@ curl --location --request POST 'http://localhost:8080/routes' \
 }'
 ```
 
-# Получить результат
+## Получить результат
 
 `` GET /routes/<id>``
 
 ```curl
   curl --location --request GET 'http://localhost:8000/routes/9'
 ```
-## Ответ OK
+### Ответ OK
 ```json
 {
     "code": 200,
@@ -94,18 +94,31 @@ curl --location --request POST 'http://localhost:8080/routes' \
 ``distance`` - метры
 ``duration`` - секунды
 
-Header 425 Too early
+### Рано
+```Header 425 Too early```
+
 ```json
 {
-    "code": 200,
+    "code": 425,
     "message": "Waiting. Route not calking yet"
 }
 ```
 
-Header 425 Too early
+### Не найдено 
+```Header 404```
+
 ```json
 {
-    "code": 200,
+    "code": 404,
+    "message": "Not found"
+}
+```
+### Ошибки расчета
+```Header 200```
+
+```json
+{
+    "code": 500,
     "message": "Calc error"
 }
 ```
