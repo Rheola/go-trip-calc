@@ -3,7 +3,7 @@
 
 ## Локальный запуск
 ``` 
-   docker-compose -f docker-compose-local.yml  up -d  
+   docker-compose up -d postgresDb
    cp dist.env app/.env
 ```
 Отредактировать ```app/.env```
